@@ -1,7 +1,7 @@
-import BigInt from 'bn.js';
 import Config from './config';
+import Secret from './secret';
 import * as Utils from './utils';
-import type { DeckJSON, Point, PointJSON } from './interfaces';
+import type { Point } from './interfaces';
 
 /**
  * An immutable object which represents a deck of cards.
@@ -22,20 +22,20 @@ export default class Deck {
 
   /**
    * Encrypts all of the deck's points with the given secret.
-   * @param {BigInt} secret Secret to encrypt with.
+   * @param {Secret} secret Secret to encrypt with.
    * @returns {Deck}
    */
-  encrypt(secret: BigInt): Deck {
+  encrypt(secret: Secret): Deck {
     const bi = secret.fromRed();
     return new Deck(this.points.map((point: Point): Point => point.mul(bi)));
   }
 
   /**
    * Decrypts all of the deck's points with the given secret.
-   * @param {BigInt} secret Secret to be used for decryption.
+   * @param {Secret} secret Secret to be used for decryption.
    * @returns {Deck}
    */
-  decrypt(secret: BigInt): Deck {
+  decrypt(secret: Secret): Deck {
     const bi = secret.invm(Config.ec.n);
     return new Deck(this.points.map((point: Point): Point => point.mul(bi)));
   }
@@ -50,10 +50,10 @@ export default class Deck {
 
   /**
    * Locks all of the deck's points with the given secrets.
-   * @param {BigInt[]} secrets Secrets to lock with.
+   * @param {Secret[]} secrets Secrets to lock with.
    * @returns {Deck}
    */
-  lock(secrets: BigInt[]): Deck {
+  lock(secrets: Secret[]): Deck {
     return new Deck(
       this.points.map((point: Point, i: number): Point =>
         point.mul(secrets[i].fromRed())
@@ -64,10 +64,10 @@ export default class Deck {
   /**
    * Unlocks a single point by using multiple secrets.
    * @param {number} index Index of the card to be unlocked.
-   * @param {BigInt[]} secrets Secrets to be used for unlocking.
+   * @param {Secret[]} secrets Secrets to be used for unlocking.
    * @returns {Point}
    */
-  unlockSingle(index: number, secrets: BigInt[]): Point {
+  unlockSingle(index: number, secrets: Secret[]): Point {
     let point = this.points[index];
 
     for (const secret of secrets) {
@@ -75,13 +75,5 @@ export default class Deck {
     }
 
     return point;
-  }
-
-  toJSON(): DeckJSON {
-    return {
-      points: this.points.map((point: Point): PointJSON =>
-        Utils.pointToJSON(point)
-      ),
-    };
   }
 }

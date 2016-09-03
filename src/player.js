@@ -1,10 +1,9 @@
 import BigInt from 'bn.js';
-import Bet from './bet';
 import Card from './card';
 import Config from './config';
-import BetType from './enums/bet-type';
+import Secret from './secret';
 import * as Utils from './utils';
-import type { PlayerJSON, Point, PointJSON } from './interfaces';
+import type { Point } from './interfaces';
 
 /**
  * A mutable object which represents a player of a game.
@@ -34,11 +33,6 @@ export default class Player {
   secretHashes: string[] = [];
 
   /**
-   * Bets made by the player.
-   */
-  bets: Bet[] = [];
-
-  /**
    * List of cards which are in the hand of the player.
    */
   cardsInHand: Card[] = [];
@@ -50,25 +44,14 @@ export default class Player {
     Object.assign(this, params);
 
     // Force setting `secretHashes` if all the secrets are known
-    if (this.secretHashes.length === 0) {
-      for (const secret of this.secrets) {
-        if (!secret) return;
-      }
-
+    if (
+      this.secretHashes.length === 0 &&
+      this.secrets.every((secret: Secret): ?Secret => secret)
+    ) {
       this.secretHashes = this.secrets.map((secret: BigInt): string =>
-        Utils.getSecretHash(secret)
+        secret.getHash()
       );
     }
-  }
-
-  /**
-   * Returns true whether the player has folded.
-   * @returns {boolean}
-   */
-  get hasFolded(): boolean {
-    if (this.bets.length === 0) return false;
-
-    return this.bets[this.bets.length - 1].type === BetType.FOLD;
   }
 
   /**
@@ -109,17 +92,5 @@ export default class Player {
       Utils.getSecretHash(secret)
     );
     return this;
-  }
-
-  toJSON(): PlayerJSON {
-    return {
-      ...(this.publicKey && { publicKey: this.publicKey }),
-      ...(this.points.length > 0 && {
-        points: this.points.map((point: Point): PointJSON =>
-          Utils.pointToJSON(point)
-        ),
-      }),
-      ...(this.secretHashes.length > 0 && { secretHashes: this.secretHashes }),
-    };
   }
 }

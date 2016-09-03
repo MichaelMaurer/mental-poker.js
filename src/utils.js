@@ -1,7 +1,8 @@
 import BigInt from 'bn.js';
 import crypto from 'crypto';
 import Config from './config';
-import type { Point, PointJSON } from './interfaces';
+import Secret from './secret';
+import type { Point } from './interfaces';
 
 /**
  * Utility functions.
@@ -68,7 +69,10 @@ export function getRandomInt(min: number, max: number): number {
  * @param {BigInt} max Maximum value (excluded).
  * @returns {BigInt}
  */
-export function getRandomBigInt(min: BigInt, max: BigInt): BigInt {
+export function getRandomBigInt(
+  min: BigInt = Config.ec.curve.one,
+  max: BigInt = Config.ecRedN
+): BigInt {
   const range = max.redSub(min);
 
   // Avoid number re-generation by adding an extra byte
@@ -95,13 +99,13 @@ export function getRandomBigInt(min: BigInt, max: BigInt): BigInt {
  * Returns an array of random secrets.
  * @memberof Utils
  * @param {number} [amount] Amount of secrets to be generated.
- * @returns {BigInt[]}
+ * @returns {Secret[]}
  */
 export function getRandomSecrets(
   amount: number = Config.cardsInDeck + 1
-): BigInt[] {
-  return Array.from(new Array(amount), (): BigInt =>
-    getRandomBigInt(Config.ec.curve.one, Config.ecRedN)
+): Secret[] {
+  return Array.from(new Array(amount), (): Secret =>
+    new Secret(getRandomBigInt())
   );
 }
 
@@ -112,25 +116,9 @@ export function getRandomSecrets(
  * @returns {Point[]}
  */
 export function getRandomPoints(amount: number = Config.cardsInDeck): Point[] {
-  return getRandomSecrets(amount).map((secret: BigInt): Point =>
-    Config.ec.g.mul(secret.fromRed())
+  return Array.from(new Array(amount), (): BigInt =>
+    Config.ec.g.mul(getRandomBigInt().fromRed())
   );
-}
-
-/**
- * Returns the hash of a given secret.
- * @memberof Utils
- * @param {BigInt} secret Secret to calculate the hash of.
- * @param {string} [algorithm] Hashing algorithm to be used.
- * @returns {string}
- */
-export function getSecretHash(
-  secret: BigInt,
-  algorithm: string = Config.hashAlgorithm
-): string {
-  return crypto.createHash(algorithm)
-    .update(secret.toString(16, 2))
-    .digest('hex');
 }
 
 /**
@@ -155,26 +143,13 @@ export function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
- * Converts a point into a JSON-serializable object.
- * @memberof Utils
- * @param {Point} point Point to be converted.
- * @returns {PointJSON}
- */
-export function pointToJSON(point: Point): PointJSON {
-  return {
-    x: point.x.toString(16, 2),
-    y: point.y.toString(16, 2),
-  };
-}
-
-/**
  * Sorts the given points in ascending order.
  * @memberof Utils
  * @param {Point[]} points Points to be sorted.
  * @returns {Point[]}
  */
 export function sortPoints(points: Point[]): Point[] {
-  return points.sort((p1: Point, p2: Point): number => {
+  return [...points].sort((p1: Point, p2: Point): number => {
     const xCmp = p1.x.cmp(p2.x);
     return xCmp === 0 ? p1.y.cmp(p2.y) : xCmp;
   });

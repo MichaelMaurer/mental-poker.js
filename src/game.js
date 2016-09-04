@@ -124,23 +124,26 @@ export default class Game {
     });
   }
 
-  // TODO: Docs for secretsOfOpponents (3 times)
   /**
    * Picks an unowned card at the given index, unlocking it by its corresponding
    * secrets.
    * @param {number} index Index of the card to be opened.
-   * @returns {Game} An instance of the opened card.
+   * @param {Object} secretsOfOpponents Secrets of opponents, as player IDs
+   * mapped to secrets.
+   * @returns {Card} An instance of the opened card.
    */
-  peekCard(index, secretsOfOpponents) {
+  peekCard(index: number, secretsOfOpponents: Object): Card {
     // Disallow peeking at unpickable cards
     // TODO: Throw an exception
     if (this.unpickableCardIndexes.indexOf(index)) return null;
 
+    // TODO: Validate the secret of each opponent
+
     // Gather the secret of self at the given index
-    const secretsOfPlayers = {
-      ...secretsOfOpponents,
-      [this.playerSelf.id]: this.playerSelf.secrets[index],
-    };
+    const secrets = [
+      ...Object.values(secretsOfOpponents),
+      this.playerSelf.secrets[index],
+    ];
 
     const currentDeck = this.deckSequence[this.deckSequence.length - 1];
     const pointUnlocked = currentDeck.unlockSingle(index, secrets);
@@ -148,39 +151,34 @@ export default class Game {
 
     for (let i = initialDeckPoints.length - 1; i >= 0; --i) {
       if (initialDeckPoints[i].eq(pointUnlocked)) {
-        // Make the unlocked card unpickable if necessary
-        if (isMadeUnpickable) {
-          this.unpickableCardIndexes.push(index);
-        }
-
         return new Card(i);
       }
     }
+
+    // TODO: Throw an exception
+    return null;
   }
 
   /**
    * Picks an unowned card at the given index, and then draws it to the hand of
    * self.
    * @param {number} index Index of the card to be drawn.
+   * @param {Object} secretsOfOpponents Secrets of opponents, as player IDs
+   * mapped to secrets.
    * @returns {Game} A new Game instance with an updated list of players and
    * their cards.
    */
-  drawCard(index, secretsOfOpponents) {
+  drawCard(index: number, secretsOfOpponents: Object): Game {
     const card = this.peekCard(index, secretsOfOpponents);
     if (!card) return null;
 
     return new Game({
       ...this,
       players: this.players.map((player: Player): Player =>
-        player.addSecret(index, secretsOfOpponents[player.id])
+        player.isSelf ?
+          new Player({ ...player, cardsInHand: [...player.cardsInHand, card] }) :
+          player.addSecret(index, secretsOfOpponents[player.id])
       ),
-      playerSelf: new Player({
-        ...this.playerSelf,
-        cardsInHand: [
-          ...this.playerSelf.cardsInHand,
-          card,
-        ],
-      }),
     });
   }
 
@@ -188,17 +186,21 @@ export default class Game {
    * Picks an unowned card at the given index, and then opens it as a community
    * card.
    * @param {number} index Index of the card to be opened.
+   * @param {Object} secretsOfOpponents Secrets of opponents, as player IDs
+   * mapped to secrets.
    * @returns {Game} A new Game instance with an updated list of players and
    * community cards.
    */
-  openCard(index, secretsOfOpponents) {
+  openCard(index: number, secretsOfOpponents: Object): Game {
     const card = this.peekCard(index, secretsOfOpponents);
     if (!card) return null;
 
     return new Game({
       ...this,
       players: this.players.map((player: Player): Player =>
-        player.addSecret(index, secretsOfOpponents[player.id])
+        player.isSelf ?
+          player :
+          player.addSecret(index, secretsOfOpponents[player.id])
       ),
       cardsOfCommunity: [
         ...this.cardsOfCommunity,

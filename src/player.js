@@ -33,7 +33,7 @@ export default class Player {
   /**
    * List of cards which are in the hand of the player.
    */
-  cardsInHand: Card[] = [];
+  cards: Card[] = [];
 
   /**
    * @param {?Object} params Parameters to be assigned to the new instance.
@@ -75,6 +75,18 @@ export default class Player {
         secret,
         ...this.secrets.slice(index + 1),
       ],
+    });
+  }
+
+  /**
+   * Adds a card to the hand of the player.
+   * @param {Card} card Card to be added.
+   * @returns {Player} A new `Player` instance.
+   */
+  addCard(card: Card): Player {
+    return new Player({
+      ...this,
+      cards: [...this.cards, card],
     });
   }
 }

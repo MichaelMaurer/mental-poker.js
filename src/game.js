@@ -28,7 +28,7 @@ export default class Game {
   /**
    * Keeps an ordered list of community cards.
    */
-  cardsOfCommunity: Card[] = [];
+  cards: Card[] = [];
 
   /**
    * Keeps an ordered list of disqualified players.
@@ -174,11 +174,11 @@ export default class Game {
 
     return new Game({
       ...this,
-      players: this.players.map((player: Player): Player =>
+      players: this.players.map((player: Player): Player => (
         player.isSelf ?
-          new Player({ ...player, cardsInHand: [...player.cardsInHand, card] }) :
+          player.addCard(card) :
           player.addSecret(index, secretsOfOpponents[player.id])
-      ),
+      )),
     });
   }
 
@@ -197,28 +197,22 @@ export default class Game {
 
     return new Game({
       ...this,
-      players: this.players.map((player: Player): Player =>
+      players: this.players.map((player: Player): Player => (
         player.isSelf ?
           player :
           player.addSecret(index, secretsOfOpponents[player.id])
-      ),
-      cardsOfCommunity: [
-        ...this.cardsOfCommunity,
-        card,
-      ],
+      )),
+      cards: [...this.cards, card],
     });
   }
 
-  disqualifyPlayer(id) {
+  disqualifyPlayer(id: string|number): Game {
     if (this.disqualifiedPlayerIds.indexOf(id)) return this;
 
     return new Game({
       ...this,
-      disqualifiedPlayerIds: [
-        ...this.disqualifiedPlayerIds,
-        id,
-      ]
-    })
+      disqualifiedPlayerIds: [...this.disqualifiedPlayerIds, id],
+    });
   }
 
   /**
@@ -268,7 +262,7 @@ export default class Game {
    */
   evaluateHands(gameType: string = Config.gameType): Game {
     const pokerSolverGame = new PokerSolverGame(gameType);
-    const commonCardStrings = this.cardsOfCommunity.map((card: Card): string =>
+    const commonCardStrings = this.cards.map((card: Card): string =>
       card.toString()
     );
 
@@ -280,7 +274,7 @@ export default class Game {
         handsOfPlayers.set(
           PokerSolverHand.solve([
             ...commonCardStrings,
-            ...player.cardsInHand.map((card: Card): string => card.toString()),
+            ...player.cards.map((card: Card): string => card.toString()),
           ], pokerSolverGame),
           player
         );

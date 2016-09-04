@@ -68,7 +68,7 @@ export default class Player {
       return null;
     }
 
-    return new this.constructor({
+    return new Player({
       ...this,
       secrets: [
         ...this.secrets.slice(0, index),

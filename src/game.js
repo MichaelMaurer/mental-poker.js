@@ -7,15 +7,12 @@ import * as Utils from './utils';
 import type { Point } from './interfaces';
 
 export default class Game {
+  cachedPlayerSelf;
+
   /**
    * Ordered list of players of the game.
    */
   players: Player[];
-
-  /**
-   * Player object of self.
-   */
-  playerSelf: Player;
 
   /**
    * Keeps an ordered list of decks used throughout the game, allowing easy
@@ -34,27 +31,36 @@ export default class Game {
   cardsOfCommunity: Card[] = [];
 
   /**
-   * Keeps an ordered list of unfair players.
+   * Keeps an ordered list of disqualified players.
    */
-  unfairPlayerIds: ?(string|number)[];
+  disqualifiedPlayerIds: ?(string|number)[];
 
   /**
    * Keeps a list of winners of the game.
    */
   winnerPlayerIds: ?(string|number)[];
 
-  constructor(params: ?Object) {
-    Object.assign(this, params);
-
-    for (const player of this.players) {
-      if (player.isSelf) {
-        this.playerSelf = player;
-        break;
+  /**
+   * Player object of self.
+   */
+  get playerSelf(): Player {
+    if (!this.cachedPlayerSelf) {
+      for (const player of this.players) {
+        if (player.isSelf) {
+          this.cachedPlayerSelf = player;
+          break;
+        }
       }
     }
 
-    // Generate initial deck by combining the points of players
+    return this.cachedPlayerSelf;
+  }
+
+  constructor(params: ?Object) {
+    Object.assign(this, params);
+
     if (!this.deckSequence) {
+      // Generate initial deck by combining the points of players
       let deckPoints = new Array(Config.cardsInDeck);
       for (const { points: playerPoints } of this.players) {
         if (playerPoints.length !== Config.cardsInDeck) {
@@ -68,7 +74,6 @@ export default class Game {
           const deckPoint = deckPoints[i];
 
           // Add the player's current point to the corresponding deck point
-          // TODO: Try iadd
           deckPoints[i] = deckPoint ? deckPoint.add(playerPoint) : playerPoint;
         }
       }
@@ -110,7 +115,7 @@ export default class Game {
   }
 
   makeCardUnpickable(index: number): Game {
-    return new this.constructor({
+    return new Game({
       ...this,
       unpickableCardIndexes: [
         ...this.unpickableCardIndexes,
@@ -164,7 +169,7 @@ export default class Game {
     const card = this.peekCard(index, secretsOfOpponents);
     if (!card) return null;
 
-    return new this.constructor({
+    return new Game({
       ...this,
       players: this.players.map((player: Player): Player =>
         player.addSecret(index, secretsOfOpponents[player.id])
@@ -190,7 +195,7 @@ export default class Game {
     const card = this.peekCard(index, secretsOfOpponents);
     if (!card) return null;
 
-    return new this.constructor({
+    return new Game({
       ...this,
       players: this.players.map((player: Player): Player =>
         player.addSecret(index, secretsOfOpponents[player.id])
@@ -202,9 +207,22 @@ export default class Game {
     });
   }
 
+  disqualifyPlayer(id) {
+    if (this.disqualifiedPlayerIds.indexOf(id)) return this;
+
+    return new Game({
+      ...this,
+      disqualifiedPlayerIds: [
+        ...this.disqualifiedPlayerIds,
+        id,
+      ]
+    })
+  }
+
   /**
    * Verifies the entire game, looking for players who were not playing fairly.
-   * @returns {Game} A new Game instance with an updated list of unfair players.
+   * @returns {Game} A new Game instance with an updated list of disqualified
+   * players.
    */
   verify(secretsOfOpponents): Game {
     // TODO

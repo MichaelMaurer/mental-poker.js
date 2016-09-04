@@ -114,13 +114,66 @@ export default class Game {
     ];
   }
 
+  /**
+   * Adds a shuffled or locked deck to the game's deck sequence. Automatically
+   * takes turn on behalf of the currently acting player, and updates game state
+   * if necessary.
+   * @param {Deck} deck Deck to be added to the game's deck sequence.
+   * @returns {Game} A new `Game` instance with the given deck added to the deck
+   * sequence.
+   */
+  addDeckToSequence(deck: Deck): Game {
+    return new Game({
+      ...this,
+      deckSequence: [...this.deckSequence, deck],
+    });
+  }
+
+  /**
+   * Encrypts and then shuffles a deck.
+   * @param {Player} [player] Player object to shuffle the deck with. Defaults
+   * to the player object of self.
+   * @param {Deck} [deck] Deck to be shuffled. If omitted, then uses the last
+   * deck in the game's deck sequence.
+   * @returns {Game} A new `Game` instance with the given deck added to the deck
+   * sequence.
+   */
+  encryptAndShuffleDeck(
+    player: Player = this.playerSelf,
+    deck: Deck = this.deckSequence[this.deckSequence.length - 1]
+  ): Game {
+    // Improve the accessibility of secrets later by using the last one now
+    const lastSecret = player.secrets[player.secrets.length - 1];
+
+    // Shuffle the deck and then encrypt it to avoid data leaks
+    const nextDeck = deck.encrypt(lastSecret).shuffle();
+    return this.addDeckToSequence(nextDeck);
+  }
+
+  /**
+   * Decrypts and then locks a deck.
+   * @param {Player} [player] Player object to lock the deck with. Defaults to
+   * the player object of self.
+   * @param {Deck} [deck] Deck to be locked. If omitted, then uses the last deck
+   * in the game's deck sequence.
+   * @returns {Game} A new `Game` instance with the given deck added to the deck
+   * sequence.
+   */
+  decryptAndLockDeck(
+    player: Player = this.playerSelf,
+    deck: Deck = this.deckSequence[this.deckSequence.length - 1]
+  ): Game {
+    const lastSecret = player.secrets[player.secrets.length - 1];
+
+    // Remove the shuffle encryption and then lock each card one by one
+    const nextDeck = deck.decrypt(lastSecret).lock(player.secrets);
+    return this.addDeckToSequence(nextDeck);
+  }
+
   makeCardUnpickable(index: number): Game {
     return new Game({
       ...this,
-      unpickableCardIndexes: [
-        ...this.unpickableCardIndexes,
-        index,
-      ],
+      unpickableCardIndexes: [...this.unpickableCardIndexes, index],
     });
   }
 
@@ -165,7 +218,7 @@ export default class Game {
    * @param {number} index Index of the card to be drawn.
    * @param {Object} secretsOfOpponents Secrets of opponents, as player IDs
    * mapped to secrets.
-   * @returns {Game} A new Game instance with an updated list of players and
+   * @returns {Game} A new `Game` instance with an updated list of players and
    * their cards.
    */
   drawCard(index: number, secretsOfOpponents: Object): Game {
@@ -188,7 +241,7 @@ export default class Game {
    * @param {number} index Index of the card to be opened.
    * @param {Object} secretsOfOpponents Secrets of opponents, as player IDs
    * mapped to secrets.
-   * @returns {Game} A new Game instance with an updated list of players and
+   * @returns {Game} A new `Game` instance with an updated list of players and
    * community cards.
    */
   openCard(index: number, secretsOfOpponents: Object): Game {
@@ -217,7 +270,7 @@ export default class Game {
 
   /**
    * Verifies the entire game, looking for players who were not playing fairly.
-   * @returns {Game} A new Game instance with an updated list of disqualified
+   * @returns {Game} A new `Game` instance with an updated list of disqualified
    * players.
    */
   verify(secretsOfOpponents): Game {
@@ -258,7 +311,7 @@ export default class Game {
    * Evaluates the hands of players, looking for the winner(s) of the game.
    * @param {string} [gameType=Config.gameType] Type of the game to evaluate
    * hands for.
-   * @returns {Game} A new Game instance with an updated list of winners.
+   * @returns {Game} A new `Game` instance with an updated list of winners.
    */
   evaluateHands(gameType: string = Config.gameType): Game {
     const pokerSolverGame = new PokerSolverGame(gameType);

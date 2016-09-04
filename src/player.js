@@ -64,15 +64,16 @@ export default class Player {
 
     // Check whether the given secret satisfies its corresponding hash
     if (Utils.getSecretHash(secret) !== this.secretHashes[index]) {
+      // TODO: Throw an exception
       return null;
     }
 
     return new this.constructor({
       ...this,
       secrets: [
-        this.secrets.slice(0, index - 1),
+        ...this.secrets.slice(0, index),
         secret,
-        this.secrets.slice(index + 1),
+        ...this.secrets.slice(index + 1),
       ],
     });
   }
